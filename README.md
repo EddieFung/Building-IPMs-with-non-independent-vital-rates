@@ -2,11 +2,11 @@
 
 This repository contains example R and nimble code to support the manuscript "Process Dependent Integral Projection Models". 
 
-Soay sheep data is available from https://doi.org/10.1111/j.1600-0706.2012.00035.x on Coulson (2012), and North Atlantic Ocean Index (NAO) data is available on https://crudata.uea.ac.uk/cru/data/nao/nao.dat which is from the Climate Research Unit at the University of East Anglia.
+Soay sheep data is available from https://doi.org/10.1111/j.1600-0706.2012.00035.x on Coulson (2012), and North Atlantic Ocean Index (NAO) data is available on https://crudata.uea.ac.uk/cru/data/nao/nao.dat from the Climate Research Unit at the University of East Anglia.
 
 You will have to download the Soay sheep data from the above link yourself to run the provided .R files. 
 
-For NAO data, we provide you the required data in this repository. “NAO” comprises all the monthly NAO data in [1986,1997] while “NAOc” comprises all the monthly NAO data in[1969,2019]
+For NAO data, we provide you the required data in this repository. “NAO” comprises all the monthly NAO data in [1986,1997] while “NAOc” comprises all the monthly NAO data in[1969,2019].
 
 
 
@@ -18,7 +18,6 @@ fn2.R: it includes the code of MCEM to approximate the mle in the correlated ran
 
 fn3.R: it includes the code to approximate log lambda, given the posterior samples of parameters. 
 
-run1.R: this is the first .R file you should run. You will obtain the posterior samples of parameters upon finish in the new directory named "sample".
+run1.R: this is the first .R file you should run. You will obtain the posterior samples of parameters in a new directory named "sample".
 
-run2.R: after you have the posterior samples, you can run this file to approximate log lambda in the new directory named "result". You can adjust the value of gamma to assess the impact on log lambda by increasing/ decreasing the strength of the between-processes correlation.
-
+run2.R: this is the second .R you should run, after you run run1.R to obtain the posterior samples. Tha approximated log lambda will be stored in a new directory named "result". You can adjust the value of gamma to assess the impact on log lambda by the increasing/decreasing strength of between-processes correlation.
