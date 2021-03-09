@@ -20,4 +20,4 @@ fn3.R: it includes the code to approximate log lambda, given the posterior sampl
 
 run1.R: this is the first .R file you should run. You will obtain the posterior samples of parameters in a new directory named "sample".
 
-run2.R: this is the second .R you should run, after you run run1.R to obtain the posterior samples. Tha approximated log lambda will be stored in a new directory named "result". You can adjust the value of gamma to assess the impact on log lambda by the increasing/decreasing strength of between-processes correlation.
+run2.R: this is the second .R you should run, after you run run1.R to obtain the posterior samples. Tha approximated log lambda will be stored in a new directory named "result". 
