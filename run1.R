@@ -21,11 +21,11 @@ df_s = df[!is.na(df[,4 ])&!is.na(df[,5]), c(5,4 ,3)] #survival only depends on l
 df_i = df[!is.na(df[,10])&!is.na(df[,5]), c(5,10,3)] #inheritance only depends on log body mass
 df_i[,2] = log(df_i[,2]) #log body mass for offspring
 
-df_g = df[!is.na(df[,6 ])&!is.na(df[,5]), c(5,6 ,1,2,3)]
+df_g = df[!is.na(df[,6 ])&!is.na(df[,5]), c(5,6 ,1,2,3)] #drop unrelated column
 df_r = df[!is.na(df[,7 ])&!is.na(df[,5]), c(5,7 ,1,2,3)]
 df_g = merge(df_g, NAO, by = "sheep.yr", all.x = T)
 df_r = merge(df_r, NAO, by = "sheep.yr", all.x = T)
-df_g = df_g[,c(2,3,4,1,5,6)]
+df_g = df_g[,c(2,3,4,1,5,6)] #reorder the df
 df_r = df_r[,c(2,3,4,1,5,6)]
 ###Raw data preparation###
 
@@ -86,6 +86,62 @@ modelMCMCC<- compileNimble(modelMCMC, project = model)
 indSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
 ###estimating parameters in independent model###
 
+###estimating parameters in reproduction conditional model###
+N2 = dim(df_r)[1]
+X2 = cbind(rep(1, N2), df_r[,1])
+Y2 = df_r[,2]
+
+df_gr = merge(df_g, df_r, by = c("id", "sheep.yr", "wt", "age", "NAO"))
+N1 = dim(df_gr)[1]
+X1 = cbind(rep(1, N1), df_gr[,3], (df_gr[,4] <= 1) * df_gr[,7])
+Y1 = df_gr[,6]; Y1 = Y1[!is.na(X1[,3])]
+X1 = X1[!is.na(X1[,3]),]
+fit_e_g = lm(Y1~X1[,2]+X1[,3])
+N1 = dim(X1)[1]
+
+data  <- list(Y1=Y1,Y2=Y2)
+const <- list(N1=N1,N2=N2,X1=X1,X2=X2)
+inits <- list(param1=fit_e_g$coefficient,param2=fit_f_r$coefficient,
+              pred1=X1 %*% fit_e_g$coefficient,
+              pred2=X2 %*% fit_f_r$coefficient,
+              sigma_g=sqrt(sum((Y1-fit_e_g$fitted.values)**2/(N1-2)))
+)
+model <- nimbleModel(code = repString, name = "model", constants = const,
+                     data = data, inits = inits)
+modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g"))
+modelC    <- compileNimble(model)
+modelMCMCC<- compileNimble(modelMCMC, project = model)
+repSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
+###estimating parameters in reproduction conditional model###
+
+###estimating parameters in copula model###
+df_gra = merge(df_g, df_r, by = c("id", "sheep.yr", "wt", "age", "NAO"), all = TRUE)
+
+N1 = sum(!is.na(df_gra[,6]))
+N3 = sum( is.na(df_gra[,6]))
+X1 = cbind(numeric(N1)+1, as.matrix(df_gra)[!is.na(df_gra[,6]),3])
+X3 = cbind(numeric(N3)+1, as.matrix(df_gra)[ is.na(df_gra[,6]),3])
+Y1 = df_gra[!is.na(df_gra[,6]),6]
+Y2 = 1 - df_gra[!is.na(df_gra[,6]),7]
+Y3 = df_gra[ is.na(df_gra[,6]),7]
+
+data  <- list(Y1=Y1,Y2=Y2,Y3=Y3)
+const <- list(N1=N1,N3=N3,X1=X1[1:N1,1:2],X3=X3[1:N3,1:2])
+inits <- list(param1=fit_f_g$coefficient,param2=fit_f_r$coefficient,
+              pred1=X1[1:N1,1:2] %*% summary(fit_f_g)$coefficients[,1],
+              pred2=X1[1:N1,1:2] %*% summary(fit_f_r)$coefficients[,1],
+              pred3=X3[1:N3,1:2] %*% summary(fit_f_r)$coefficients[,1],
+              sigma_g=sigma(fit_f_g),
+              alpha=0
+)
+model <- nimbleModel(code = copString, name = "model", constants = const,
+                     data = data, inits = inits)
+modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g","alpha"))
+modelC    <- compileNimble(model)
+modelMCMCC<- compileNimble(modelMCMC, project = model)
+copSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
+###estimating parameters in copula model###
+
 ###estimating parameters in drivers shared model###
 N1 = dim(df_g)[1]
 N2 = dim(df_r)[1]
@@ -109,95 +165,6 @@ modelC    <- compileNimble(model)
 modelMCMCC<- compileNimble(modelMCMC, project = model)
 driSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
 ###estimating parameters in drivers shared model###
-
-###estimating parameters in reproduction conditional model###
-N2 = dim(df_r)[1]
-X2 = cbind(rep(1, N2), df_r[,1])
-Y2 = df_r[,2]
-
-df_gr = merge(df_g, df_r, by = c("id", "sheep.yr"))
-df_gr = df_gr[,-c(5,6,7,10)]
-colnames(df_gr) = c("id", "sheep.yr", "wt", "wtt1", "rec", "age")
-N1 = dim(df_gr)[1]
-X1 = cbind(rep(1, N1), df_gr[,3], (df_gr[,6] <= 1) * df_gr[,5])
-Y1 = df_gr[,4]; Y1 = Y1[!is.na(X1[,3])]
-X1 = X1[!is.na(X1[,3]),]
-fit_e_g = lm(Y1~X1[,2]+X1[,3])
-N1 = dim(X1)[1]
-
-data  <- list(Y1=Y1,Y2=Y2)
-const <- list(N1=N1,N2=N2,X1=X1,X2=X2)
-inits <- list(param1=fit_e_g$coefficient,param2=fit_f_r$coefficient,
-              pred1=X1 %*% fit_e_g$coefficient,
-              pred2=X2 %*% fit_f_r$coefficient,
-              sigma_g=sqrt(sum((Y1-fit_e_g$fitted.values)**2/(N1-2)))
-)
-model <- nimbleModel(code = repString, name = "model", constants = const,
-                     data = data, inits = inits)
-modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g"))
-modelC    <- compileNimble(model)
-modelMCMCC<- compileNimble(modelMCMC, project = model)
-repSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
-###estimating parameters in reproduction conditional model###
-
-###estimating parameters in copula model###
-idx = numeric(dim(df_g)[1])
-for (i in 1:dim(df_r)[1]) {
-  if (sum(df_g["id"] == df_r[i,3])) {
-    idx[i] = TRUE
-  } else {
-    idx[i] = FALSE
-  }
-}
-idx1 = which(idx == 1)
-idx0 = which(idx == 0)
-
-fit_i_g =  lmer(wtt1~wt+(1|id), data = df_g)
-fit_i_r = glmer( rec~wt+(1|id), data = df_r[idx1,], family = "binomial")
-fit_i_r2= glmer( rec~wt+(1|id), data = df_r[idx0,], family = "binomial")
-
-X1 = cbind(numeric(dim(df_g)[1])+1, as.matrix(df_g))
-X2 = cbind(numeric(length(idx1))+1, as.matrix(df_r[idx1,]))
-X3 = cbind(numeric(length(idx0))+1, as.matrix(df_r[idx0,]))
-N1 = dim(X1)[1]
-N2 = dim(X2)[1]
-N3 = dim(X3)[1]
-Z1 = model.matrix(~0+as.factor(X1[,'id']))
-Z2 = model.matrix(~0+as.factor(X2[,'id']))
-Z3 = model.matrix(~0+as.factor(X3[,'id']))
-noI = dim(Z1)[2]
-noI2= dim(Z3)[2]
-colnames(Z1) = 1:noI
-colnames(Z2) = 1:noI
-colnames(Z3) = 1:noI2
-
-const <- list(N1=N1,N2=N2,N3=N3,noI=noI,noI2=noI2,
-              X1=X1[1:N1,c(1,2)],X2=X2[1:N2,c(1,2)],X3=X3[1:N3,c(1,2)],
-              Z1=Z1[1:N1,1:noI],Z2=Z2[1:N2,1:noI],Z3=Z3[1:N3,1:noI2],
-              Omega=matrix(c(0.001,0,0,0.001),nrow=2),mu=c(0,0)
-)
-data  <- list(Y1=X1[,3],Y2=X2[,3],Y3=X3[,3])
-inits <- list(param1=summary(fit_i_g)$coefficients[,1],param2=summary(fit_i_r)$coefficients[,1],
-              pred1=X1[1:N1,c(1,2)] %*% summary(fit_i_g)$coefficients[,1],
-              pred2=X2[1:N2,c(1,2)] %*% summary(fit_i_r)$coefficients[,1],
-              pred3=X3[1:N3,c(1,2)] %*% summary(fit_i_r)$coefficients[,1],
-              u=cbind(data.frame(ranef(fit_i_g))[,4], data.frame(ranef(fit_i_r))[,4]),
-              v=data.frame(ranef(fit_i_r2))[,4],
-              sigma_g=as.data.frame(VarCorr(fit_i_g))[2,5],
-              W=matrix(c(1/as.data.frame(VarCorr(fit_i_g))[1,4],0,0,1/as.data.frame(VarCorr(fit_i_r))[1,4]),
-                       nrow=2),
-              W_inv=matrix(c(as.data.frame(VarCorr(fit_i_g))[1,4],0,0,as.data.frame(VarCorr(fit_i_r))[1,4]),
-                           nrow=2),
-              tau_g=as.data.frame(VarCorr(fit_i_g))[1,5],tau_r=as.data.frame(VarCorr(fit_i_r))[1,5],
-              rho=0
-)
-model <- nimbleModel(code = copString, name = "model", constants = const,
-                     data = data, inits = inits)
-modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g","rho"))
-modelC    <- compileNimble(model)
-modelMCMCC<- compileNimble(modelMCMC, project = model)
-copSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
-###estimating parameters in copula model###
 
 ###estimating parameters in uncorrelated random year effect model###
 X1 = cbind(numeric(dim(df_g)[1])+1, as.matrix(df_g))
