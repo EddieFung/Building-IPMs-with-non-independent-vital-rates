@@ -1,6 +1,6 @@
 # Building integral projection models with non-independent vital rates
 
-This repository contains example R and nimble code to support the manuscript "Building integral projection models with non-independent vital rates. 
+This repository contains example R and nimble code to support the manuscript "Building integral projection models with non-independent vital rates". 
 
 Soay sheep data is available from https://doi.org/10.1111/j.1600-0706.2012.00035.x on Coulson (2012), and North Atlantic Ocean Index (NAO) data is available on https://crudata.uea.ac.uk/cru/data/nao/nao.dat from the Climate Research Unit at the University of East Anglia.
 
