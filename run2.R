@@ -1,4 +1,9 @@
-#sheep lambda approximation
+# This is the second .R file you should run, given that you already ran run1.R to obtain the posterior samples.
+# This .R include code for approximate the log lambda.
+# The estimates of log lambda will be stored in a new directory name "result".
+# The computational time depends on the number of available core. 
+# It took us around 2 hours to finish with 5 cores
+
 replication = 500
 core = 5 #number of cores for used, it took us around 2 hours to finish with 5 cores
 source("fn3.R")
@@ -11,6 +16,7 @@ NAO1 = cbind(NAO1[2:12,1], (rowSums(NAO1[2:12,2:4]) + NAO1[1:11,13]) / 4) #NAO d
 NAO3 = cbind(NAO[22:51,1], (rowSums(NAO[22:51,2:4]) + NAO[21:50,13]) / 4) #NAO data in 1990-2019
 NAO5 = cbind(NAO[ 2:51,1], (rowSums(NAO[ 2:51,2:4]) + NAO[ 1:50,13]) / 4) #NAO data in 1970-2019
 
+# posterior sample of vital rate parameters
 ISSample  = as.matrix(read.table(paste(getwd(), "/sample/ISSample" , sep=""), header = TRUE))
 indSample = as.matrix(read.table(paste(getwd(), "/sample/indSample", sep=""), header = TRUE))
 repSample = as.matrix(read.table(paste(getwd(), "/sample/repSample", sep=""), header = TRUE))
@@ -21,7 +27,7 @@ mitSample = as.matrix(read.table(paste(getwd(), "/sample/mitSample", sep=""), he
 iiiSample = as.matrix(read.table(paste(getwd(), "/sample/iiiSample", sep=""), header = TRUE))
 miiSample = as.matrix(read.table(paste(getwd(), "/sample/miiSample", sep=""), header = TRUE))
 id0 = sample(1:dim(miiSample)[1], replication, replace = TRUE)
-miiSample = miiSample[id1,] #we do sampling on model VIII here to reduce the memory
+miiSample = miiSample[id1,] #we do sampling on M3 here to reduce the memory
 n1 = dim(ISSample)[1]
 
 time = Sys.time()
@@ -32,7 +38,7 @@ temp = mclapply(1:replication, function(x)
           indSample[id1[x],c(1,2,5)],indSample[id1[x],3:4]),
   mc.cores = core)
 temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
-store1[,1] = temp[,1]; store2[,1] = temp[,2]; store3[,1] = temp[,3] #independent IPMs
+store1[,1] = temp[,1]; store2[,1] = temp[,2]; store3[,1] = temp[,3] # Ind(a): independent IPMs
 
 id0 = sample(1:n1, replication, replace = TRUE)
 id1 = sample(1:n1, replication, replace = TRUE)
@@ -42,7 +48,7 @@ temp = mclapply(1:replication, function(x)
           iitSample[id1[x],c(1,2,5)],iitSample[id1[x],3:4],c(0, iitSample[id1[x],c(6,7)])),
   mc.cores = core)
 temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
-store1[,2] = temp[,1]; store2[,2] = temp[,2]; store3[,2] = temp[,3] #uncorrelated random year effect models
+store1[,2] = temp[,1]; store2[,2] = temp[,2]; store3[,2] = temp[,3] # Ind(b): uncorrelated random year effect models
 
 id0 = sample(1:n1, replication, replace = TRUE)
 id1 = sample(1:dim(iiiSample)[1], replication, replace = TRUE)
@@ -53,27 +59,7 @@ temp = mclapply(1:replication, function(x)
           iiiSample[x,c(1,2,5)],iiiSample[x,3:4],c(0, iiiSample[x,c(6,7)])),
   mc.cores = core)
 temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
-store1[,3] = temp[,1]; store2[,3] = temp[,2]; store3[,3] = temp[,3]  #uncorrelated random individual effect models
-
-id0 = sample(1:n1, replication, replace = TRUE)
-id1 = sample(1:n1, replication, replace = TRUE)
-temp = mclapply(1:replication, function(x) 
-  lam_rep(50,1,4,ISSample[id0[x],3:4],ISSample[id0[x],c(1,2,5)],
-          repSample[id1[x],c(1,2,6)],repSample[id1[x],4:5],repSample[id1[x],3]),
-  mc.cores = core)
-temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
-store1[,4] = temp[,1]; store2[,4] = temp[,2]; store3[,4] = temp[,3] #reproduction conditional IPMs
-
-
-id0 = sample(1:n1, replication, replace = TRUE)
-id1 = sample(1:n1, replication, replace = TRUE)
-temp = mclapply(1:replication, function(x) 
-  lam_cop(50,1,4,ISSample[id0[x],3:4],ISSample[id0[x],c(1,2,5)],
-          copSample[id1[x],c(1,2,6)],copSample[id1[x],3:4],copSample[id1[x],5]),
-  mc.cores = core)
-temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
-store1[,5] = temp[,1]; store2[,5] = temp[,2]; store3[,5] = temp[,3] #copula models
-
+store1[,3] = temp[,1]; store2[,3] = temp[,2]; store3[,3] = temp[,3]  # Ind(c): uncorrelated random individual effect models
 
 id0 = sample(1:n1, replication, replace = TRUE)
 id1 = sample(1:n1, replication, replace = TRUE)
@@ -83,7 +69,7 @@ temp = mclapply(1:replication, function(x)
            driSample[id1[x],c(1,2,7)],driSample[id1[x],4:5],c(-0.019,1.09,driSample[id1[x],c(3,6)])),
   mc.cores = core)
 temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
-store1[,6] = temp[,1]; store2[,6] = temp[,2]; store3[,6] = temp[,3] #shared driver models
+store1[,4] = temp[,1]; store2[,4] = temp[,2]; store3[,4] = temp[,3] # M1: shared driver models
 
 #shared driver models, with bootstrapping NAO
 # temp = mclapply(1:replication, function(x) 
@@ -100,7 +86,7 @@ temp = mclapply(1:replication, function(x)
           mitSample[id1[x],c(1,2,6)],mitSample[id1[x],3:4],mitSample[id1[x],c(5,7,8)]),
   mc.cores = core)
 temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
-store1[,7] = temp[,1]; store2[,7] = temp[,2]; store3[,7] = temp[,3]  #correlated random year effect models
+store1[,5] = temp[,1]; store2[,5] = temp[,2]; store3[,5] = temp[,3]  # M2: correlated random year effect models
 
 id0 = sample(1:n1, replication, replace = TRUE)
 temp = mclapply(1:replication, function(x) 
@@ -109,7 +95,26 @@ temp = mclapply(1:replication, function(x)
           miiSample[x,c(1,2,6)],miiSample[x,3:4],miiSample[x,c(5,7,8)]),
   mc.cores = core)
 temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
-store1[,8] = temp[,1]; store2[,8] = temp[,2]; store3[,8] = temp[,3]  #uncorrelated random individual effect models
+store1[,6] = temp[,1]; store2[,6] = temp[,2]; store3[,6] = temp[,3]  # M3: correlated random individual effect models
+
+id0 = sample(1:n1, replication, replace = TRUE)
+id1 = sample(1:n1, replication, replace = TRUE)
+temp = mclapply(1:replication, function(x) 
+  lam_rep(50,1,4,ISSample[id0[x],3:4],ISSample[id0[x],c(1,2,5)],
+          repSample[id1[x],c(1,2,6)],repSample[id1[x],4:5],repSample[id1[x],3]),
+  mc.cores = core)
+temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
+store1[,7] = temp[,1]; store2[,7] = temp[,2]; store3[,7] = temp[,3] # M4: reproduction conditional IPMs
+
+
+id0 = sample(1:n1, replication, replace = TRUE)
+id1 = sample(1:n1, replication, replace = TRUE)
+temp = mclapply(1:replication, function(x) 
+  lam_cop(50,1,4,ISSample[id0[x],3:4],ISSample[id0[x],c(1,2,5)],
+          copSample[id1[x],c(1,2,6)],copSample[id1[x],3:4],copSample[id1[x],5]),
+  mc.cores = core)
+temp = matrix(unlist(temp), ncol = 3, byrow = TRUE)
+store1[,8] = temp[,1]; store2[,8] = temp[,2]; store3[,8] = temp[,3] # M5: copula models
 
 print(Sys.time() - time)
 dir.create("result") #create a new directory to store log lambda
