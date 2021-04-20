@@ -1,5 +1,7 @@
-# parameter estimation
-# the computational time is a few minutes per model, except the random individual effect models,
+# This is the first .R file you should run.
+# This .R include code for estimating vital rate parameters by MCMC on nimble. 
+# The posterior samples of vital rate parameters will be stored in a new directory name "sample".
+# The computational time is a few minutes per model, except the random individual effect models,
 # which may run around a day
 source("fn1.R") #nimble string
 source("fn2.R") #MCEM
