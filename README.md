@@ -20,4 +20,4 @@ fn3.R: this .R includes the code and required libraries to approximate log lambd
 
 run1.R: this is the first .R file you should run. This .R include code for estimating vital rate parameters by MCMC on nimble. The posterior samples of vital rate parameters will be stored in a new directory name "sample". The computational time is a few minutes per model, except model D1b and D3, which may run around a day
 
-run2.R: this is the second .R file you should run, given that you already ran run1.R to obtain the posterior samples. This .R include code for approximate the log lambda. The estimates of log lambda will be stored in a new directory name "result". The computational time depends on the number of available core. It took us around 2 hours to finish with 5 cores
+run2.R: this is the second .R file you should run, given that you already ran run1.R to obtain the posterior samples. This .R include code for approximate the log lambda. The estimates of log lambda will be stored in a new directory name "result". The computational time depends on the number of available core. It took us less than 1 hour to finish with 5 cores
