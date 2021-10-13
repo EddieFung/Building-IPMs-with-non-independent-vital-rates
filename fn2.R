@@ -1,4 +1,4 @@
-# This .R includes the code of MCEM to approximate the mle in the correlated random individual effect model (M3).
+# This .R includes the code of MCEM to approximate the mle in the correlated random individual effect model (D3).
 # This approximated mle will be used as the initialization of MCMC to reduce the computational cost for convergence.
 # Instead of running this .R, you can run run1.R that will use the following functions.
 
