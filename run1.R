@@ -1,9 +1,9 @@
 # This is the first .R file you should run.
 # This .R include code for estimating vital rate parameters by MCMC on nimble. 
 # The posterior samples of vital rate parameters will be stored in a new directory name "sample".
-# The computational time is a few minutes per model, except the random individual effect models,
+# The computational time is a few minutes per model, except model D1b and D3,
 # which may run around a day
-source("fn1.R") #nimble string
+source("fn1.R") #nimble/ MCMC string
 source("fn2.R") #MCEM
 
 ###NAO preparation###
@@ -65,7 +65,7 @@ modelMCMCC<- compileNimble(modelMCMC, project = model)
 ISSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
 ###estimating parameters of inheritance and survival###
 
-###estimating parameters in independent model###
+###estimating parameters in the vanilla model (I1)###
 N1 = dim(df_g)[1]
 N2 = dim(df_r)[1]
 X1 = cbind(rep(1, N1), df_g[,1])
@@ -86,9 +86,9 @@ modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g"))
 modelC    <- compileNimble(model)
 modelMCMCC<- compileNimble(modelMCMC, project = model)
 indSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
-###estimating parameters in independent model###
+###estimating parameters in the vanilla model (I1)###
 
-###estimating parameters in reproduction conditional model###
+###estimating parameters in the reproduction conditional model (D1a)###
 N2 = dim(df_r)[1]
 X2 = cbind(rep(1, N2), df_r[,1])
 Y2 = df_r[,2]
@@ -114,9 +114,9 @@ modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g"))
 modelC    <- compileNimble(model)
 modelMCMCC<- compileNimble(modelMCMC, project = model)
 repSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
-###estimating parameters in reproduction conditional model###
+###estimating parameters in the reproduction conditional model (D1a)###
 
-###estimating parameters in copula model###
+###estimating parameters in the copula model (D1b)###
 df_gra = merge(df_g, df_r, by = c("id", "sheep.yr", "wt", "age", "NAO"), all = TRUE)
 
 N1 = sum(!is.na(df_gra[,6]))
@@ -127,24 +127,12 @@ Y1 = df_gra[!is.na(df_gra[,6]),6]
 Y2 = 1 - df_gra[!is.na(df_gra[,6]),7]
 Y3 = df_gra[ is.na(df_gra[,6]),7]
 
-data  <- list(Y1=Y1,Y2=Y2,Y3=Y3)
-const <- list(N1=N1,N3=N3,X1=X1[1:N1,1:2],X3=X3[1:N3,1:2])
-inits <- list(param1=fit_f_g$coefficient,param2=fit_f_r$coefficient,
-              pred1=X1[1:N1,1:2] %*% summary(fit_f_g)$coefficients[,1],
-              pred2=X1[1:N1,1:2] %*% summary(fit_f_r)$coefficients[,1],
-              pred3=X3[1:N3,1:2] %*% summary(fit_f_r)$coefficients[,1],
-              sigma_g=sigma(fit_f_g),
-              alpha=0
-)
-model <- nimbleModel(code = copString, name = "model", constants = const,
-                     data = data, inits = inits)
-modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g","alpha"))
-modelC    <- compileNimble(model)
-modelMCMCC<- compileNimble(modelMCMC, project = model)
-copSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
-###estimating parameters in copula model###
+inits = c(fit_f_g$coefficients,fit_f_r$coefficients,sigma(fit_f_g),0)
+propo = c(0.1,0.1,0.2,0.2,0.1,0.15,0.1) # sd for the proposal distributions
+copSample = MCMC_cop(Y1, Y2, X1, X1, Y3, X3, propo, inits, 20000, 100000)
+###estimating parameters in the copula model (D1b)###
 
-###estimating parameters in drivers shared model###
+###estimating parameters in the shared drivers model (D2a)###
 N1 = dim(df_g)[1]
 N2 = dim(df_r)[1]
 X1 = cbind(rep(1, N1), df_g[,1], df_g[,6])
@@ -166,9 +154,9 @@ modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g"))
 modelC    <- compileNimble(model)
 modelMCMCC<- compileNimble(modelMCMC, project = model)
 driSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
-###estimating parameters in drivers shared model###
+###estimating parameters in the shared drivers model (D2a)###
 
-###estimating parameters in uncorrelated random year effect model###
+###estimating parameters in the uncorrelated random year effect model (I2)###
 X1 = cbind(numeric(dim(df_g)[1])+1, as.matrix(df_g))
 X2 = cbind(numeric(dim(df_r)[1])+1, as.matrix(df_r))
 N1 = dim(X1)[1]
@@ -194,9 +182,9 @@ modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g","sigma_u1"
 modelC    <- compileNimble(model)
 modelMCMCC<- compileNimble(modelMCMC, project = model)
 iitSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
-###estimating parameters in uncorrelated random year effect model###
+###estimating parameters in the uncorrelated random year effect model (I2)###
 
-###estimating parameters in correlated random year effect model###
+###estimating parameters in the correlated random year effect model (D2b)###
 const <- list(N1=N1,N2=N2,noI=noI,Omega=matrix(c(0.001,0,0,0.001),nrow=2),mu=c(0,0),
               X1=X1[1:N1,1:2],X2=X2[1:N2,1:2],Z1=Z1[1:N1,1:noI],Z2=Z2[1:N2,1:noI])
 data  <- list(Y1=X1[,3],Y2=X2[,3])
@@ -218,9 +206,9 @@ modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g","sigma_u1"
 modelC    <- compileNimble(model)
 modelMCMCC<- compileNimble(modelMCMC, project = model)
 mitSample <- runMCMC(modelMCMCC, nburnin = 20000, niter = 100000)
-###estimating parameters in correlated random year effect model###
+###estimating parameters in the correlated random year effect model (D2b)###
 
-###estimating parameters in uncorrelated random individual effect model###
+###estimating parameters in the uncorrelated random individual effect model (I3)###
 idx = numeric(dim(df_g)[1])
 for (i in 1:dim(df_r)[1]) {
   if (sum(df_g["id"] == df_r[i,3])) {
@@ -277,9 +265,9 @@ modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g","sigma_u1"
 modelC    <- compileNimble(model)
 modelMCMCC<- compileNimble(modelMCMC, project = model)
 iiiSample <- runMCMC(modelMCMCC, nburnin = 40000, niter = 200000)
-###estimating parameters in uncorrelated random individual effect model###
+###estimating parameters in the uncorrelated random individual effect model (I3)###
 
-###estimating parameters in correlated random individual effect model###
+###estimating parameters in the correlated random individual effect model (D3)###
 # To increase the speed of convergence, we initialized the chain around the mle,
 # which is approximated by MCEM.
 # You can use the below code to run the MCEM to get the approximated mle, but it may take around 2-3 hours
@@ -335,7 +323,7 @@ modelMCMC <- buildMCMC(model,monitors = c("param1","param2","sigma_g","sigma_u1"
 modelC    <- compileNimble(model)
 modelMCMCC<- compileNimble(modelMCMC, project = model)
 miiSample <- runMCMC(modelMCMCC, nburnin = 200000, niter = 1000000) 
-###estimating parameters in correlated random individual effect model###
+###estimating parameters in the correlated random individual effect model (D3)###
 
 
 dir.create("sample") #create a new directory to store poterior samples of parameters
