@@ -8,7 +8,7 @@ library(lme4)
 library(parallel)
 library(mvtnorm)
 ###IPM (midpoint rule)###
-# the midpoint rule is applicable for Ind(a), M4, M5
+# the midpoint rule is applicable for Model I1, Model D1a, Model D1b
 bin_ker=function(x,param) { #kernel for bernoulli vital rate
   u=1/(1+exp(-param[1]-param[2]*x))
   return(u)
@@ -31,21 +31,21 @@ gau_adjust = function(G, mesh) {
   for (id in idx_over) {G[, id] = G[, id] / sum(G[,id])}
   return(G)
 }
-gb_ker=function(x_new,x,param_g,param_r,param_c) { #kernel for bernoulli vital rate
+gb_ker=function(x_new,x,param_g,param_r,param_c) { # growth kernel for breeder
   z = (x_new-param_g[1]-param_g[2]*x)*param_c[1]/param_g[3]
   p = 1/(1+exp(-param_r[1]-param_r[2]*x))
   delta = pnorm((qnorm(1-p)-z)/sqrt(1-param_c[1]**2))
   u=(1-delta)*dnorm(x_new,param_g[1]+param_g[2]*x,param_g[3])
   return(u)
 }
-gn_ker=function(x_new,x,param_g,param_r,param_c) { #kernel for gaussian vital rate
+gn_ker=function(x_new,x,param_g,param_r,param_c) { # growth kernel for non-breeder
   z = (x_new-param_g[1]-param_g[2]*x)*param_c[1]/param_g[3]
   p = 1/(1+exp(-param_r[1]-param_r[2]*x))
   delta = pnorm((qnorm(1-p)-z)/sqrt(1-param_c[1]**2))
   u=delta*dnorm(x_new,param_g[1]+param_g[2]*x,param_g[3])
   return(u)
 }
-lam_ind=function(mesh,min_size,max_size,param_s,param_i,param_g,param_r) { #Ind(a): independent models
+lam_ind=function(mesh,min_size,max_size,param_s,param_i,param_g,param_r) { # Model I1: vanilla models
   h=(max_size-min_size)/mesh # step size
   b=min_size+c(0:mesh)*h # boundary points
   y=0.5*(b[1:mesh]+b[2:(mesh+1)]) # mesh points, mid_pt rule
@@ -67,7 +67,8 @@ lam_ind=function(mesh,min_size,max_size,param_s,param_i,param_g,param_r) { #Ind(
   return(c(log(lam),mu,sig2))
 }
 
-lam_rep=function(mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_e) { #M4: reproduction conditional models
+#Model D1a: reproduction conditional models
+lam_rep=function(mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_e) { 
   h  =(max_size-min_size)/mesh # step size
   b  =min_size+c(0:mesh)*h # boundary points
   y  =0.5*(b[1:mesh]+b[2:(mesh+1)]) # mesh points, mid_pt rule
@@ -99,7 +100,7 @@ lam_rep=function(mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_e)
   return(c(log(lam),mu,sig2))
 }
 
-lam_cop=function(mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_c) { #M5: copula models
+lam_cop=function(mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_c) { #Model D1b: copula models
   h =(max_size-min_size)/mesh # step size
   b =min_size+c(0:mesh)*h # boundary points
   y =0.5*(b[1:mesh]+b[2:(mesh+1)]) # mesh points, mid_pt rule
@@ -124,9 +125,9 @@ lam_cop=function(mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_c)
 
 
 ###IPM (element-selection simulation)###
-# the element-selection simulation is applicable for IPMs with temporal heterogeneity, Ind(b), M1, M2
+# the element-selection simulation is applicable for IPMs with temporal heterogeneity, Model I2, Model D2a, Model D2b
 
-#matrix construction for shared drivers models (M1)
+#matrix construction for shared drivers models (D2a)
 mat_dri=function(mesh,min_size,max_size,S,I,param_g,param_r,param_d,ran) {
   h =(max_size-min_size)/mesh # step size
   b =min_size+c(0:mesh)*h # boundary points
@@ -141,7 +142,7 @@ mat_dri=function(mesh,min_size,max_size,S,I,param_g,param_r,param_d,ran) {
   return(K)
 }
 
-#simulation for shared drivers models (M1) with gaussian predictive distribution on NAO
+#simulation for shared drivers models (D2a) with gaussian predictive distribution on NAO
 SIM_dri1 = function(T0,T,mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_d) {
   h =(max_size-min_size)/mesh # step size
   b =min_size+c(0:mesh)*h # boundary points
@@ -167,7 +168,7 @@ SIM_dri1 = function(T0,T,mesh,min_size,max_size,param_s,param_i,param_g,param_r,
   return(c(mean(log(tail(store[,1],-T0))), colMeans(store[,2:3])))
 }
 
-#simulation for shared drivers models (M1) with bootstrapping NAO
+#simulation for shared drivers models (D2a) with bootstrapping NAO
 SIM_dri2 = function(T0,T,mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_d,NAO) {
   h =(max_size-min_size)/mesh # step size
   b =min_size+c(0:mesh)*h # boundary points
@@ -193,7 +194,7 @@ SIM_dri2 = function(T0,T,mesh,min_size,max_size,param_s,param_i,param_g,param_r,
   return(c(mean(log(tail(store[,1],-T0))), colMeans(store[,2:3])))
 }
 
-#matrix construction for (correlated) random year effect models (Ind(b)/ M2)
+#matrix construction for (correlated) random year effect models (I2/ I2b)
 mat_mit=function(mesh,min_size,max_size,S,I,param_g,param_r,param_m) {
   h =(max_size-min_size)/mesh # step size
   b =min_size+c(0:mesh)*h # boundary points
@@ -209,7 +210,7 @@ mat_mit=function(mesh,min_size,max_size,S,I,param_g,param_r,param_m) {
   return(K)
 }
 
-#simulation for (correlated) random year effect models (Ind(b)/ M2)
+#simulation for (correlated) random year effect models (I2/ D2b)
 SIM_mit = function(T0,T,mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_m) {
   h =(max_size-min_size)/mesh # step size
   b =min_size+c(0:mesh)*h # boundary points
@@ -236,9 +237,12 @@ SIM_mit = function(T0,T,mesh,min_size,max_size,param_s,param_i,param_g,param_r,p
 ###IPM (element-selection simulation)###
 
 ###IPM (intermediate method)###
-# the intermediate method is applicable for IPMs with persistent individual heterogeneity, Ind(c), M3
+# the intermediate method is applicable for IPMs with persistent individual heterogeneity, Model I3, Model D3
+# Here because we know the distribution of z (random individual effects), 
+# instead of using mid-point rule on z,
+# we use mesh point that are of uniform quantile
 
-#matrix construction for (correlated) random individual effect models (Ind(c)/ M3)
+#matrix construction for (correlated) random individual effect models (I3/ D3)
 mat_mii=function(meshi,mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_m) {
   D = matrix(c(param_m[2]**2,rep(param_m[1]*param_m[2]*param_m[3],2),param_m[3]**2),nrow=2)
   yi = matrix(0, nrow = meshi**2, ncol = 2)
@@ -272,7 +276,7 @@ mat_mii=function(meshi,mesh,min_size,max_size,param_s,param_i,param_g,param_r,pa
   return(K)
 }
 
-#simulation for (correlated) random individual effect models (Ind(c)/ M3)
+#simulation for (correlated) random individual effect models (I3/ D3)
 SIM_mii = function(T,meshi,mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_m) {
   K=mat_mii(meshi,mesh,min_size,max_size,param_s,param_i,param_g,param_r,param_m)
   
