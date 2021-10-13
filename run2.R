@@ -2,7 +2,7 @@
 # This .R include code for approximate the log lambda.
 # The estimates of log lambda will be stored in a new directory name "result".
 # The computational time depends on the number of available core. 
-# It took us less than 0.5 hour to finish with 5 cores
+# It took us less than 1 hour to finish with 5 cores
 
 source("fn3.R")
 replication = 100
